@@ -1,5 +1,6 @@
 import gym
 import numpy as np
+import copy
 
 SPACE = 0
 ACTOR = 1
@@ -55,15 +56,42 @@ class State:
 
 
 class SokobanEnv(gym.Env):
-    def __init__(self):
-        # self.state =
-        pass
+    UP = np.array([-1, 0])
+    DOWN = np.array([1, 0])
+    LEFT = np.array([0, -1])
+    RIGHT = np.array([0, 1])
+
+    def __init__(self, config_text):
+        self.state = State(config_text)
+        self.history = []
 
     def step(self, action):
-        if action == 1:
-            self.state = 1
-        else:
-            self.state = 0
+        new_state = copy.copy(self.state)
+        next_position = self.state.actor + action # [2, 2] + [0, 1]
+        """
+        conditions when pushing:
+        1. wall: can't move
+        2. space: move
+        3. box -> space: push
+        4. box -> box/wall: can't move 
+        """
+        if self.state.map[next_position] == SPACE:
+            new_state.map[self.state.actor] = SPACE
+            new_state.map[next_position] = ACTOR
+            new_state.actor = next_position
+
+        elif self.state.map[next_position] == BOX:
+            next_two_position = next_position + action
+            if self.state.map[next_two_position] == SPACE:
+                new_state.map[self.state.actor] = SPACE
+                new_state.map[next_position] = ACTOR
+                new_state.map[next_two_position] = BOX
+                new_state.actor = next_position
+        # Save each state
+        self.history.append(self.state)
+        self.state = new_state
+
+        return new_state
 
     def reset(self):
         pass
