@@ -11,12 +11,18 @@ BOX_ON_TARGET = 5
 
 
 class State:
-    def __init__(self, config_text="""5 3
+    def __init__(self, map_array, actor, boxes, targets):
+        self.map = map_array
+        self.actor = actor
+        self.boxes = boxes
+        self.targets = targets
+
+    @classmethod
+    def from_config(cls, config_text="""5 3
 12 1 1 1 2 1 3 2 1 2 3 3 1 3 3 4 1 4 3 5 1 5 2 5 3
 1 3 2
 1 4 2
 2 2"""):
-        self.config_text = config_text
         lines = config_text.split("\n")
         dimensions = lines[0].split(" ")
         wall_str = lines[1].split(" ")
@@ -24,35 +30,34 @@ class State:
         target_str = lines[3].split(" ")
         actor_str = lines[4].split(" ")
 
-        self.map = np.zeros((int(dimensions[0]), int(dimensions[1])))
-        self.actor = np.array([int(actor_str[0]), int(actor_str[1])])
-        self.boxes = np.array([])
-        self.targets = np.array([])
+        np_map = np.zeros((int(dimensions[0]), int(dimensions[1])))
+        np_actor = np.array([int(actor_str[0]), int(actor_str[1])])
 
         for i in range(1, int(wall_str[0]) + 1):
             print(int(wall_str[i * 2 - 1]) - 1, int(wall_str[i * 2]) - 1)
-            self.map[int(wall_str[i * 2 - 1]) - 1, int(wall_str[i * 2]) - 1] = WALL
+            np_map[int(wall_str[i * 2 - 1]) - 1, int(wall_str[i * 2]) - 1] = WALL
 
         boxes = []
         for i in range(1, int(box_str[0]) + 1, 2):
-            self.map[int(box_str[i]) - 1, int(box_str[i + 1]) - 1] = BOX
+            np_map[int(box_str[i]) - 1, int(box_str[i + 1]) - 1] = BOX
             boxes.append([int(box_str[i]) - 1, int(box_str[i + 1]) - 1])
-        self.boxes = np.array(boxes)
+        np_boxes = np.array(boxes)
 
         targets = []
         for i in range(1, int(target_str[0]) + 1, 2):
-            if self.map[int(target_str[i]) - 1, int(target_str[i + 1]) - 1] == BOX:
-                self.map[int(target_str[i]) - 1, int(target_str[i + 1]) - 1] = BOX_ON_TARGET
+            if np_map[int(target_str[i]) - 1, int(target_str[i + 1]) - 1] == BOX:
+                np_map[int(target_str[i]) - 1, int(target_str[i + 1]) - 1] = BOX_ON_TARGET
             else:
-                self.map[int(target_str[i]) - 1, int(target_str[i + 1]) - 1] = TARGET
+                np_map[int(target_str[i]) - 1, int(target_str[i + 1]) - 1] = TARGET
             targets.append([int(target_str[i]) - 1, int(target_str[i + 1]) - 1])
-        self.targets = np.array(targets)
+        np_targets = np.array(targets)
 
-        self.map[int(actor_str[0]) - 1, int(actor_str[1]) - 1] = ACTOR
+        np_map[int(actor_str[0]) - 1, int(actor_str[1]) - 1] = ACTOR
+
+        return cls(np_map,np_actor,np_boxes, np_targets)
 
     def __copy__(self):
-        return State(self.config_text)
-
+        return State(self.map, self.actor, self.boxes, self.targets)
 
 
 class SokobanEnv(gym.Env):
@@ -62,7 +67,7 @@ class SokobanEnv(gym.Env):
     RIGHT = np.array([0, 1])
 
     def __init__(self, config_text):
-        self.state = State(config_text)
+        self.state = State.from_config(config_text)
         self.history = []
 
     def step(self, action):
@@ -101,7 +106,7 @@ class SokobanEnv(gym.Env):
 
 
 if __name__ == '__main__':
-    s = State()
+    s = State.from_config()
     print(s.map)
     print(s.boxes)
     print(s.targets)
