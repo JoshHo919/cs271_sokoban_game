@@ -12,10 +12,10 @@ BOX_ON_TARGET = 5
 
 class State:
     def __init__(self, map_array, actor, boxes, targets):
-        self.map = map_array
-        self.actor = actor
-        self.boxes = boxes
-        self.targets = targets
+        self.map = np.copy(map_array)
+        self.actor = np.copy(actor)
+        self.boxes = np.copy(boxes)
+        self.targets = np.copy(targets)
 
     @classmethod
     def from_config(cls, config_text="""5 3
@@ -78,19 +78,26 @@ class SokobanEnv(gym.Env):
         2. space: move
         3. box -> space: push
         4. box -> box/wall: can't move 
+        5. box -> target: move onto target
         """
         if self.state.map[next_position[0]][next_position[1]] == SPACE:
-            new_state.map[self.state.actor[0]][self.state.actor[0]] = SPACE
-            new_state.map[next_position[0]][next_position[0]] = ACTOR
+            new_state.map[self.state.actor[0]][self.state.actor[1]] = SPACE
+            new_state.map[next_position[0]][next_position[1]] = ACTOR
             new_state.actor = next_position
 
         elif self.state.map[next_position[0]][next_position[1]] == BOX:
             next_two_position = next_position + action
-            if self.state.map[next_two_position[0]][next_two_position[1]] == SPACE:
+            if self.state.map[next_two_position[0]][next_two_position[1]] in [SPACE, TARGET]:
                 new_state.map[self.state.actor[0]][self.state.actor[1]] = SPACE
                 new_state.map[next_position[0]][next_position[1]] = ACTOR
-                new_state.map[next_two_position[0]][next_two_position[1]] = BOX
+                new_state.map[next_two_position[0]][next_two_position[1]] = BOX if\
+                    self.state.map[next_two_position[0]][next_two_position[1]] == SPACE else BOX_ON_TARGET
                 new_state.actor = next_position
+                # modify box location been pushed
+                for i in range(len(new_state.boxes)):
+                    if np.array_equal(new_state.boxes[i], next_position):
+                        new_state.boxes[i] = next_two_position
+                        break
         # Save each state
         self.history.append(self.state)
         self.state = new_state
@@ -107,12 +114,12 @@ class SokobanEnv(gym.Env):
 if __name__ == '__main__':
     env = SokobanEnv()
     # s = State.from_config()
-    for _ in range(3):
-        env.step(env.DOWN)
+    for a in [env.DOWN, env.UP, env.LEFT, env.LEFT, env.LEFT, env.LEFT]:
+        env.step(a)
         print(env.state.map)
 
     print("==================")
     for s in env.history:
         print(s.map)
-    # print(env.history)
+    print(env.history)
 
