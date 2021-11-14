@@ -53,7 +53,7 @@ class State:
 
         np_map[int(actor_str[0]) - 1, int(actor_str[1]) - 1] = ACTOR
 
-        return cls(np_map,np_actor,np_boxes, np_targets)
+        return cls(np_map, np_actor, np_boxes, np_targets)
 
     def __copy__(self):
         return State(self.map, self.actor, self.boxes, self.targets)
@@ -90,7 +90,7 @@ class SokobanEnv(gym.Env):
             if self.state.map[next_two_position[0]][next_two_position[1]] in [SPACE, TARGET]:
                 new_state.map[self.state.actor[0]][self.state.actor[1]] = SPACE
                 new_state.map[next_position[0]][next_position[1]] = ACTOR
-                new_state.map[next_two_position[0]][next_two_position[1]] = BOX if\
+                new_state.map[next_two_position[0]][next_two_position[1]] = BOX if \
                     self.state.map[next_two_position[0]][next_two_position[1]] == SPACE else BOX_ON_TARGET
                 new_state.actor = next_position
                 # modify box location been pushed
@@ -105,10 +105,14 @@ class SokobanEnv(gym.Env):
         return new_state
 
     def reset(self):
-        pass
+        self.state = self.history[0]
+        self.history.clear()
 
     def render(self, mode="human"):
-        pass
+        if mode == "human":
+            # TODO: using matplotlib
+            pass
+        return self.state.map
 
 
 if __name__ == '__main__':
@@ -122,4 +126,3 @@ if __name__ == '__main__':
     for s in env.history:
         print(s.map)
     print(env.history)
-
