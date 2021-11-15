@@ -23,6 +23,11 @@ class State:
 1 3 2
 1 4 2
 2 2"""):
+        """
+        Parses the content of input file and creates map representation.
+        :param config_text: string from input file
+        :return: a state instance with map and the locations of the objects on the map.
+        """
         lines = config_text.split("\n")
         dimensions = lines[0].split(" ")
         wall_str = lines[1].split(" ")
@@ -70,16 +75,20 @@ class SokobanEnv(gym.Env):
         self.history = []
 
     def step(self, action):
+        """
+        :param action:
+        :return new state given this action:
+        """
         new_state = copy.copy(self.state)
         next_position = self.state.actor + action
-        """
-        conditions when pushing:
-        1. wall: can't move
-        2. space: move
-        3. box -> space: push
-        4. box -> box/wall: can't move 
-        5. box -> target: move onto target
-        """
+
+        # conditions when pushing:
+        # 1. wall: can't move
+        # 2. space: move
+        # 3. box -> space: push
+        # 4. box -> box/wall: can't move
+        # 5. box -> target: move onto target
+
         if self.state.map[next_position[0]][next_position[1]] == SPACE:
             new_state.map[self.state.actor[0]][self.state.actor[1]] = SPACE
             new_state.map[next_position[0]][next_position[1]] = ACTOR
@@ -113,6 +122,13 @@ class SokobanEnv(gym.Env):
             # TODO: using matplotlib
             pass
         return self.state.map
+
+    def is_goal(self):
+        pass
+
+    def is_dead_end(self):
+        # some boxes been pushed into corner
+        pass
 
 
 if __name__ == '__main__':
