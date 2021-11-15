@@ -10,6 +10,7 @@ if __name__ == '__main__':
             content = "".join(f.readlines())
 
             env = SokobanEnv(config_text=content)
+            env.render()
             print(env.state.map)
     else:
         print("No input file specified")

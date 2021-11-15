@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 import copy
+import matplotlib.pyplot as plt
 
 SPACE = 0
 ACTOR = 1
@@ -119,7 +120,9 @@ class SokobanEnv(gym.Env):
 
     def render(self, mode="human"):
         if mode == "human":
-            # TODO: using matplotlib
+            # Use matplotlib to plot the map
+            plt.imshow(self.state.map, interpolation='none')
+            plt.show()
             pass
         return self.state.map
 
