@@ -1,16 +1,16 @@
-# This is a sample Python script.
+from environment import SokobanEnv
+import argparse
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    parser = argparse.ArgumentParser("Put your file here")
+    parser.add_argument("command", nargs="*")
+    args = parser.parse_args()
+    if len(args.command):
+        with open(args.command[0], 'r') as f:
+            content = "".join(f.readlines())
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+            env = SokobanEnv(config_text=content)
+            print(env.state.map)
+    else:
+        print("No input file specified")
+

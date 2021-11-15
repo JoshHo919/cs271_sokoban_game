@@ -70,8 +70,8 @@ class SokobanEnv(gym.Env):
     LEFT = np.array([0, -1])
     RIGHT = np.array([0, 1])
 
-    def __init__(self, config_text=None):
-        self.state = State.from_config()
+    def __init__(self, config_text):
+        self.state = State.from_config(config_text)
         self.history = []
 
     def step(self, action):
@@ -129,16 +129,3 @@ class SokobanEnv(gym.Env):
     def is_dead_end(self):
         # some boxes been pushed into corner
         pass
-
-
-if __name__ == '__main__':
-    env = SokobanEnv()
-    # s = State.from_config()
-    for a in [env.DOWN, env.UP, env.LEFT, env.LEFT, env.LEFT, env.LEFT]:
-        env.step(a)
-        print(env.state.map)
-
-    print("==================")
-    for s in env.history:
-        print(s.map)
-    print(env.history)
