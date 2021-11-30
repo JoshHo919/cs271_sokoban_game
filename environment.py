@@ -3,6 +3,7 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 import random
+import heuristics
 
 SPACE = 0
 ACTOR = 1
@@ -25,9 +26,58 @@ epsilon = 0.2
 maximum_length = 1000
 
 
+def step(state, action):
+    new_state = copy.copy(state)
+    next_position = state.actor + actions[action]
+
+    # conditions when pushing:
+    # 1. wall: can't move
+    # 2. space: move
+    # 3. box -> space: push
+    # 4. box -> box/wall: can't move
+    # 5. box -> target: move onto target
+
+    # update actor's current position for the new state depends on current actor on target or space
+    new_state.map[state.actor[0]][state.actor[1]] = SPACE \
+        if state.map[state.actor[0]][state.actor[1]] == ACTOR else TARGET
+
+    # if next actor position is space
+    if state.map[next_position[0]][next_position[1]] == SPACE:
+        new_state.map[next_position[0]][next_position[1]] = ACTOR
+    # if next actor position is box
+    elif state.map[next_position[0]][next_position[1]] == BOX:
+        # the position box will be pushed on
+        next_two_position = next_position + actions[action]
+        if state.map[next_two_position[0]][next_two_position[1]] in [SPACE, TARGET]:
+            new_state.map[next_position[0]][next_position[1]] = ACTOR
+            new_state.map[next_two_position[0]][next_two_position[1]] = BOX if \
+                state.map[next_two_position[0]][next_two_position[1]] == SPACE else BOX_ON_TARGET
+            # modify box location been pushed
+            for i in range(len(new_state.boxes)):
+                if np.array_equal(new_state.boxes[i], next_position):
+                    new_state.boxes[i] = next_two_position
+                    break
+        
+    elif state.map[next_position[0]][next_position[1]] == TARGET:
+        new_state.map[next_position[0]][next_position[1]] = ACTOR_ON_TARGET
+
+    # update actor position in the new state
+    new_state.actor = next_position
+    new_state.key = state_hash(new_state)
+
+    return new_state
+
+# hash based on location of agent only
+def loc_hash(state):
+    r, c = state.map.shape
+    b = max(r, c)
+    return state.actor[0] * b + state.actor[1]
+
 # return hash based on location of agent and boxes
 def state_hash(state):
-    sorted_boxes = state.boxes[np.lexsort((state.boxes[:, 1], state.boxes[:, 0]))]
+    sorted_boxes = np.array([]).reshape(0, 2)
+    if len(state.boxes) > 0:
+        sorted_boxes = state.boxes[np.lexsort((state.boxes[:, 1], state.boxes[:, 0]))]
     # print(state.boxes)
     # print(sorted_boxes)
     r, c = state.map.shape
@@ -116,8 +166,19 @@ class SokobanEnv(gym.Env):
         self.result = []
 
         self.q_find = 0
+        self.distance_table = heuristics.get_distance_table(self.state)
+        self.heuristics = [heuristics.EMMHeuristic(self.distance_table), heuristics.AgentBoxHeuristic(self.distance_table)]
+        self.h_weight = [2, 1] # relative importance of heuristics
+
+    def heuristic(self, state):
+        h_val = 0
+        for i, h in enumerate(self.heuristics):
+            h_val += self.h_weight[i] * h.heuristic(state)
+        return h_val
+
     def select_action(self):
         feasible_actions = []
+        h = self.heuristic(self.state)
 
         for name, action in actions.items():
             next_position = self.state.actor + action
@@ -130,12 +191,20 @@ class SokobanEnv(gym.Env):
                 q_value = 0
                 if (self.state, name) in self.q_table:
                     q_value = self.q_table[(self.state, name)]
-                feasible_actions.append((name, q_value))
+
+                s_a = step(self.state, name)
+                H = h - self.heuristic(s_a)
+                delta = 1
+                if (self.state, name) in self.f_table:
+                    delta = 1 / (self.f_table[(self.state, name)] + 1)
+                feasible_actions.append((name, delta * q_value + (1 - delta) * H))
+                #feasible_actions.append((name, q_value))
 
         # apply exploration with epsilon-greedy
         if random.random() <= epsilon:
             final_action = random.choice(feasible_actions)[0]
         else:
+            h_vals = []
             max_q = max(feasible_actions, key=lambda item: item[1])[1]
             final_action = random.choice([action[0] for action in feasible_actions if action[1] == max_q])
 
