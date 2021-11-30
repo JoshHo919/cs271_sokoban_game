@@ -21,13 +21,12 @@ if __name__ == '__main__':
                 if e != 0:
                     env.reset()
                 while not env.is_deadlock() and not env.is_goal():
+                    # env.render()
                     # print(env.state.map)
                     if mode == 'human':
                         env.step(input("input action: "))
                     else:
                         env.step(env.select_action())
-                    # env.render()
-
 
             goal_rate = 0
             last100_goal_rate = 0

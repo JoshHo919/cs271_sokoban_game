@@ -21,7 +21,7 @@ LEFT = np.array([0, -1])
 RIGHT = np.array([0, 1])
 actions = {'UP': UP, 'LEFT': LEFT, 'DOWN': DOWN, 'RIGHT': RIGHT}
 
-epsilon = 0.01
+epsilon = 0.2
 maximum_length = 1000
 
 
@@ -71,13 +71,16 @@ class State:
             np_map[int(wall_str[i * 2 - 1]) - 1, int(wall_str[i * 2]) - 1] = WALL
 
         boxes = []
-        for i in range(1, int(box_str[0]) + 1, 2):
+        print(box_str)
+        for i in range(1, int(box_str[0]) * 2 + 1, 2):
+            print(int(box_str[i]), int(box_str[i + 1]))
             np_map[int(box_str[i]) - 1, int(box_str[i + 1]) - 1] = BOX
             boxes.append([int(box_str[i]) - 1, int(box_str[i + 1]) - 1])
         np_boxes = np.array(boxes)
 
         targets = []
-        for i in range(1, int(target_str[0]) + 1, 2):
+        for i in range(1, int(target_str[0]) * 2 + 1, 2):
+            print(int(target_str[i]), int(target_str[i + 1]))
             if np_map[int(target_str[i]) - 1, int(target_str[i + 1]) - 1] == BOX:
                 np_map[int(target_str[i]) - 1, int(target_str[i + 1]) - 1] = BOX_ON_TARGET
             else:
