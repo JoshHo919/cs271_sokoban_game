@@ -43,13 +43,13 @@ class State:
             np_map[int(wall_str[i * 2 - 1]) - 1, int(wall_str[i * 2]) - 1] = WALL
 
         boxes = []
-        for i in range(1, int(box_str[0]) + 1, 2):
+        for i in range(1, int(box_str[0]) * 2 + 1, 2):
             np_map[int(box_str[i]) - 1, int(box_str[i + 1]) - 1] = BOX
             boxes.append([int(box_str[i]) - 1, int(box_str[i + 1]) - 1])
         np_boxes = np.array(boxes)
 
         targets = []
-        for i in range(1, int(target_str[0]) + 1, 2):
+        for i in range(1, int(target_str[0]) * 2 + 1, 2):
             if np_map[int(target_str[i]) - 1, int(target_str[i + 1]) - 1] == BOX:
                 np_map[int(target_str[i]) - 1, int(target_str[i + 1]) - 1] = BOX_ON_TARGET
             else:
