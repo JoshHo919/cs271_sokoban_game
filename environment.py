@@ -12,8 +12,8 @@ TARGET = 4
 BOX_ON_TARGET = 5
 ACTOR_ON_TARGET = 6
 
-BASIC_REWARD = {'SPACE': -1, 'BOX_BY_BOX': -40, 'BOX_BY_WALL': -20, 'INFEASIBLE': -500,\
-                'ON_TARGET': 300, 'ON_SPACE': -1, 'OFF_TARGET': -400, 'DEADLOCK': -500}
+BASIC_REWARD = {'SPACE': -0.5, 'BOX_BY_BOX': -10, 'BOX_BY_WALL': -5, 'INFEASIBLE': -9999,\
+                'ON_TARGET': 25, 'ON_SPACE': -1, 'OFF_TARGET': -50, 'DEADLOCK': -99}
 
 UP = np.array([-1, 0])
 DOWN = np.array([1, 0])
@@ -21,9 +21,22 @@ LEFT = np.array([0, -1])
 RIGHT = np.array([0, 1])
 actions = {'UP': UP, 'LEFT': LEFT, 'DOWN': DOWN, 'RIGHT': RIGHT}
 
-epsilon = 0.1
+epsilon = 0.01
 maximum_length = 1000
 
+
+# return hash based on location of agent and boxes
+def state_hash(state):
+    sorted_boxes = state.boxes[np.lexsort((state.boxes[:, 1], state.boxes[:, 0]))]
+    # print(state.boxes)
+    # print(sorted_boxes)
+    r, c = state.map.shape
+    base = max(r, c)
+    value = state.actor[0] + state.actor[1] * base
+    for i, b in enumerate(sorted_boxes):
+        j = 2 * (i + 1)
+        value += b[0] * base ** j + b[1] * base ** (j + 1)
+    return value
 
 class State:
     def __init__(self, map_array, actor, boxes, targets):
@@ -31,6 +44,7 @@ class State:
         self.actor = np.copy(actor)
         self.boxes = np.copy(boxes)
         self.targets = np.copy(targets)
+        self.key = state_hash(self)
 
     @classmethod
     def from_config(cls, config_text="""5 3
@@ -78,6 +92,12 @@ class State:
     def __copy__(self):
         return State(self.map, self.actor, self.boxes, self.targets)
 
+    def __eq__(self, other):
+        return True if self.key == other.key else False
+
+    def __hash__(self):
+        return hash(self.key)
+
 
 class SokobanEnv(gym.Env):
 
@@ -88,12 +108,13 @@ class SokobanEnv(gym.Env):
         self.f_table = {}
 
         self.current_length = 0
-        self.discount_factor = 0.5
+        self.discount_factor = 1
         self.deadlock = False
 
         self.episode = 0
         self.result = []
 
+        self.q_find = 0
     def select_action(self):
         feasible_actions = []
 
@@ -169,6 +190,7 @@ class SokobanEnv(gym.Env):
 
         # update actor position in the new state
         new_state.actor = next_position
+        new_state.key = state_hash(new_state)
 
         # get current reward
         reward = self.get_reward(self.state, action)
@@ -182,6 +204,7 @@ class SokobanEnv(gym.Env):
             new_q_value = self.q_table[(self.state, action)] + \
                           learning_rate * (reward + self.discount_factor * future_reward - self.q_table[
                 (self.state, action)])
+            self.q_find += 1
         else:
             new_q_value = learning_rate * (reward + self.discount_factor * future_reward)
 
@@ -200,12 +223,22 @@ class SokobanEnv(gym.Env):
         :param state: a future state
         :return: the maximum reward of the future state
         """
-        rewards = []
+        feasible_actions = []
         for action in actions:
-            rewards.append(self.get_reward(state, action))
+            next_position = state.actor + actions[action]
+            next_two_position = next_position + actions[action]
+            if state.map[next_position[0], next_position[1]] in [SPACE, TARGET] or \
+                    (state.map[next_position[0], next_position[1]] == BOX and \
+                     state.map[next_two_position[0], next_two_position[1]] not in [BOX, WALL, BOX_ON_TARGET]):
+                feasible_actions.append(action)
+
+        rewards = [self.get_q_value(state, action) for action in feasible_actions]
 
         print("future reward: " + str(max(rewards)))
         return max(rewards)
+
+    def get_q_value(self, state, action):
+        return self.q_table[(state,action)] if (state, action) in self.q_table else 0
 
     def get_reward(self, state, action):
         """
@@ -332,3 +365,4 @@ class SokobanEnv(gym.Env):
         elif blocked_X >= 1 and blocked_Y >= 1:
             return True
         return False
+
