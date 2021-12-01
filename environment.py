@@ -14,7 +14,7 @@ BOX_ON_TARGET = 5
 ACTOR_ON_TARGET = 6
 
 BASIC_REWARD = {'SPACE': -0.5, 'BOX_BY_BOX': -10, 'BOX_BY_WALL': -5, 'INFEASIBLE': -9999,\
-                'ON_TARGET': 25, 'ON_SPACE': -1, 'OFF_TARGET': -50, 'DEADLOCK': -99}
+                'ON_TARGET': 25, 'ON_SPACE': -1, 'OFF_TARGET': -50, 'DEADLOCK': -99, 'GOAL': 10e10}
 
 UP = np.array([-1, 0])
 DOWN = np.array([1, 0])
@@ -192,13 +192,21 @@ class SokobanEnv(gym.Env):
                 if (self.state, name) in self.q_table:
                     q_value = self.q_table[(self.state, name)]
 
+                # compute heuristic
                 s_a = step(self.state, name)
                 H = h - self.heuristic(s_a)
+
+                # set delta value
                 delta = 1
                 if (self.state, name) in self.f_table:
                     delta = 1 / (self.f_table[(self.state, name)] + 1)
-                feasible_actions.append((name, delta * q_value + (1 - delta) * H))
+                feasible_actions.append((name, (1 - delta) * q_value + delta * H))
                 #feasible_actions.append((name, q_value))
+        
+        # set epsilon value
+        #epsilon = 0.5
+        #if (self.state, name) in self.f_table:
+        #    epsilon = 1 / (2 * (self.f_table[(self.state, name)] + 1))
 
         # apply exploration with epsilon-greedy
         if random.random() <= epsilon:
