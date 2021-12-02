@@ -1,5 +1,5 @@
 import numpy as np
-from copy import deepcopy
+from copy import copy
 
 SPACE = 0
 ACTOR = 1
@@ -65,7 +65,11 @@ class State:
 
         return cls(np_map, np_actor, np_boxes, np_targets)
 
-    def __hash__(self) -> int:
+    def __copy__(self):
+        return State(np.copy(self.map), np.copy(self.actor), np.copy(self.boxes), np.copy(self.targets)
+)
+
+    def __hash__(self):
         return state_hash(self)
 
 # hash based on location of agent only
@@ -79,8 +83,6 @@ def state_hash(state):
     sorted_boxes = np.array([]).reshape(0, 2)
     if len(state.boxes) > 0:
         sorted_boxes = state.boxes[np.lexsort((state.boxes[:, 1], state.boxes[:, 0]))]
-    # print(state.boxes)
-    # print(sorted_boxes)
     r, c = state.map.shape
     base = max(r, c)
     value = state.actor[0] + state.actor[1] * base
@@ -90,7 +92,7 @@ def state_hash(state):
     return hash(value)
 
 def step(state, action):
-    new_state = deepcopy(state)
+    new_state = copy(state)
     next_position = state.actor + actions[action]
 
     # conditions when pushing:
@@ -194,7 +196,7 @@ def is_out_of_bounds(state, loc):
     r, c = state.map.shape
     return (loc[0] < 0 or loc[0] >= r) and (loc[1] < 0 or loc[1] >= c)
 
-# returns true if a block at loc is immovable
+# returns true if a box at loc is immovable
 def is_immovable(state, loc):
     for a1, a2 in [('UP', 'RIGHT'), ('RIGHT', 'DOWN'), ('DOWN', 'LEFT'), ('LEFT', 'UP')]:
         n1 = loc + actions[a1]

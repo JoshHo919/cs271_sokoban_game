@@ -1,6 +1,6 @@
 import environment
 import numpy as np
-from copy import deepcopy
+from copy import copy
 from scipy.optimize import linear_sum_assignment
 from queue import Queue
 
@@ -12,7 +12,7 @@ class Node:
 
 def get_distance_table(state):
     table = {}
-    s = deepcopy(state)
+    s = copy(state)
     r, c = s.map.shape
 
     # delete boxes and targets
@@ -26,7 +26,7 @@ def get_distance_table(state):
     for i in range(r):
         for j in range(c):
             if int(s.map[i, j]) != environment.WALL:
-                new_state = deepcopy(s)
+                new_state = copy(s)
                 
                 # move actor to set location
                 loc = new_state.actor

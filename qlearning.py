@@ -1,7 +1,7 @@
 import environment
 import heuristics
 import random
-from copy import deepcopy
+from copy import copy
 
 class QLearner:
     def __init__(self, state) -> None:
@@ -94,7 +94,7 @@ class QLearner:
 
     def learn(self, episodes):
         for i in range(episodes):
-            state = deepcopy(self.state)
+            state = copy(self.state)
             episode_length = 0
             goal_found = False
             deadlock = False
