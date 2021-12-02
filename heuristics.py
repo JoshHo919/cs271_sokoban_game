@@ -48,14 +48,12 @@ def get_distance_table(state):
 
 def compute_distance_matrix(table, state):
     r, c = state.map.shape
-    b = max(r, c)
     distance_matrix = np.full((r, c), -1)
     explored = {}
     q = Queue()
     q.put(Node(state, None, 0))
 
-    curr_loc = state.actor
-    loc_hash = b * curr_loc[0] + curr_loc[1]
+    loc_hash = environment.loc_hash(state)
 
     # use bfs to find shortest distance for each pair of points
     while not q.empty():
