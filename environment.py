@@ -13,16 +13,17 @@ TARGET = 4
 BOX_ON_TARGET = 5
 ACTOR_ON_TARGET = 6
 
-BASIC_REWARD = {'SPACE': -0.5, 'BOX_BY_BOX': -10, 'BOX_BY_WALL': -5, 'INFEASIBLE': -9999,\
-                'ON_TARGET': 25, 'ON_SPACE': -1, 'OFF_TARGET': -50, 'DEADLOCK': -99, 'GOAL': 10e10}
+BASIC_REWARD = {'SPACE': -8, 'BOX_BY_BOX': -4, 'BOX_BY_WALL': -2, 'INFEASIBLE': -9999,\
+                'ON_TARGET': 35, 'ON_SPACE': -6, 'OFF_TARGET': -75, 'DEADLOCK': -99, 'GOAL': 10e20}
 
 UP = np.array([-1, 0])
 DOWN = np.array([1, 0])
 LEFT = np.array([0, -1])
 RIGHT = np.array([0, 1])
 actions = {'UP': UP, 'LEFT': LEFT, 'DOWN': DOWN, 'RIGHT': RIGHT}
+#
 
-epsilon = 0.2
+
 maximum_length = 1000
 
 
@@ -170,6 +171,8 @@ class SokobanEnv(gym.Env):
         self.heuristics = [heuristics.EMMHeuristic(self.distance_table), heuristics.AgentBoxHeuristic(self.distance_table)]
         self.h_weight = [2, 1] # relative importance of heuristics
 
+        self.epsilon = 0.1
+
     def heuristic(self, state):
         h_val = 0
         for i, h in enumerate(self.heuristics):
@@ -204,19 +207,19 @@ class SokobanEnv(gym.Env):
                 #feasible_actions.append((name, q_value))
         
         # set epsilon value
-        #epsilon = 0.5
-        #if (self.state, name) in self.f_table:
+        # epsilon = 0.5
+        # if (self.state, name) in self.f_table:
         #    epsilon = 1 / (2 * (self.f_table[(self.state, name)] + 1))
 
         # apply exploration with epsilon-greedy
-        if random.random() <= epsilon:
+        if random.random() <= self.epsilon:
             final_action = random.choice(feasible_actions)[0]
         else:
             h_vals = []
             max_q = max(feasible_actions, key=lambda item: item[1])[1]
             final_action = random.choice([action[0] for action in feasible_actions if action[1] == max_q])
 
-        print("Selected action: " + final_action)
+        # print("Selected action: " + final_action)
         return final_action
 
     def step(self, action):
@@ -288,8 +291,7 @@ class SokobanEnv(gym.Env):
 
         # update Q-value
         self.q_table.update({(self.state, action): new_q_value})
-
-        print("Q_value: " + str(new_q_value))
+        # print("Q_value: " + str(new_q_value))
 
         # Save each state, current state <- new state
         self.history.append(self.state)
@@ -312,7 +314,7 @@ class SokobanEnv(gym.Env):
 
         rewards = [self.get_q_value(state, action) for action in feasible_actions]
 
-        print("future reward: " + str(max(rewards)))
+        # print("future reward: " + str(max(rewards)))
         return max(rewards)
 
     def get_q_value(self, state, action):
@@ -362,6 +364,9 @@ class SokobanEnv(gym.Env):
         # if deadlock triggered
         if self.deadlock:
             reward += BASIC_REWARD['DEADLOCK']
+
+        if self.is_goal():
+            reward += BASIC_REWARD['GOAL']
         return reward
 
     def reset(self):
@@ -392,7 +397,7 @@ class SokobanEnv(gym.Env):
         count = 0
         for row in self.state.map:
             for col in row:
-                if col == 4:
+                if col == 4 or col == 6:
                     count += 1
         if count == 0:
             print("--- GOAL ---")
