@@ -105,6 +105,7 @@ class QLearner:
     def learn(self, episodes):
         shortest_solution = []
         recent_50 = []
+        goal_found_list = []
         for i in range(episodes):
             state = copy(self.state)
             episode_length = 0
@@ -141,12 +142,12 @@ class QLearner:
                 state = new_state
 
                 episode_length += 1
-
             if episode_length == self.max_episode_length:
                 recent_50.append(0)
             if len(recent_50) > 50:
                 recent_50 = recent_50[1:]
-
+            goal_found_list.append(goal_found)
             print(f"Episode {i+1}, length={episode_length}, goal_found={goal_found}, deadlock={deadlock}, max_q={self.get_max_q(state)}")
-        print("recent_50_goal_rate: ", sum(recent_50) / 50)
+        print(f"Total goal rate: {sum(goal_found_list) / episodes}")
+        print(f"Last 100 goal rate: {sum(goal_found_list[-100:]) / 100}")
         print(f"Shortest solution has length {len(shortest_solution)}: {shortest_solution}")
