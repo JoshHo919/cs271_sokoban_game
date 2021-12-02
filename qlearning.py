@@ -10,7 +10,7 @@ class QLearner:
         self.f_table = {}
         self.discount_factor = 0.8
         self.learning_rate = 0.5
-        self.epsilon = 0.5
+        self.epsilon = 0.1
 
         self.distance_table = heuristics.get_distance_table(self.state)
         self.heuristics = [heuristics.EMMHeuristic(self.distance_table), heuristics.AgentBoxHeuristic(self.distance_table)]
@@ -65,7 +65,7 @@ class QLearner:
         return max(q_vals)
 
     def get_q_value(self, state, action):
-        return self.q_table[(state, action)] if (state, action) in self.q_table else -25
+        return self.q_table[(state, action)] if (state, action) in self.q_table else 0
 
     def get_state_action_frequency(self, state, action):
         if (state, action) in self.f_table:
@@ -88,22 +88,35 @@ class QLearner:
         return 1 / (f + 1)
 
     def get_learning_rate(self, state, action):
-        #f = self.get_state_action_frequency(state, action)
-        #return 1 / (2 * (f + 1))
-        return self.learning_rate
+        f = self.get_state_action_frequency(state, action)
+        return 1 / (2 * (f + 1))
+        #return self.learning_rate
+
+    def backtracking_update(self, state_actions):
+        for s, a in state_actions[::-1]:
+            s_a = environment.step(s, a)
+            r = environment.get_reward(s, a, s_a)
+            self.update_q_value(s, a, s_a, r)
 
     def learn(self, episodes):
+        shortest_solution = []
+
         for i in range(episodes):
             state = copy(self.state)
             episode_length = 0
             goal_found = False
             deadlock = False
-            if i % 10 == 0:
-                self.epsilon = 0.5 / (i/10+1)
+            states = []
+            actions = []
+            
             while episode_length < self.max_episode_length:
-                #print(state.map)
+                
+                # exit if goal or deadlock is reached
                 if environment.is_goal(state):
-                    self.learning_rate *= 0.9
+                    # update q-values of path if goal is reached
+                    self.backtracking_update(list(zip(states, actions)))
+                    if len(actions) < len(shortest_solution) or len(shortest_solution) == 0:
+                        shortest_solution = actions
                     goal_found = True
                     break
                 elif environment.is_deadlock(state):
@@ -111,6 +124,9 @@ class QLearner:
                     break
                 
                 action = self.select_action(state)
+                states.append(state)
+                actions.append(action)
+
                 new_state = environment.step(state, action)
                 reward = environment.get_reward(state, action, new_state)
 
@@ -119,5 +135,7 @@ class QLearner:
                 state = new_state
 
                 episode_length += 1
+                
 
             print(f"Episode {i+1}, length={episode_length}, goal_found={goal_found}, deadlock={deadlock}, max_q={self.get_max_q(state)}")
+        print(f"Shortest solution has length {len(shortest_solution)}: {shortest_solution}")

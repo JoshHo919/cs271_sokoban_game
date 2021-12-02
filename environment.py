@@ -1,5 +1,6 @@
 import numpy as np
 from copy import copy
+from dataclasses import dataclass
 
 SPACE = 0
 ACTOR = 1
@@ -24,6 +25,7 @@ class State:
         self.actor = np.copy(actor)
         self.boxes = np.copy(boxes)
         self.targets = np.copy(targets)
+        self.key = state_hash(self)
 
     @classmethod
     def from_config(cls, config_text):
@@ -66,11 +68,13 @@ class State:
         return cls(np_map, np_actor, np_boxes, np_targets)
 
     def __copy__(self):
-        return State(np.copy(self.map), np.copy(self.actor), np.copy(self.boxes), np.copy(self.targets)
-)
+        return State(np.copy(self.map), np.copy(self.actor), np.copy(self.boxes), np.copy(self.targets))
+
+    def __eq__(self, other) :
+        return self.key == other.key
 
     def __hash__(self):
-        return state_hash(self)
+        return hash(self.key)
 
 # hash based on location of agent only
 def loc_hash(state):

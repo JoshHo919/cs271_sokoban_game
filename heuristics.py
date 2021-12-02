@@ -10,29 +10,37 @@ class Node:
         self.prev = prev
         self.cost = cost
 
-def get_distance_table(state):
-    table = {}
+# returns state with boxes/targets removed, actor moved to loc
+def get_clean_state(state, loc):
     s = copy(state)
     r, c = s.map.shape
+    boxes = s.boxes
+    targets = s.targets
+    map = s.map
+    actor = s.actor
 
     # delete boxes and targets
-    for l in s.boxes:
-        s.map[l[0]][l[1]] = environment.SPACE
-    for l in s.targets:
-        s.map[l[0]][l[1]] = environment.SPACE
-    s.boxes = np.array([]).reshape(0, 0)
-    s.targets = np.array([]).reshape(0, 0)
+    for l in boxes:
+        map[l[0]][l[1]] = environment.SPACE
+    for l in targets:
+        map[l[0]][l[1]] = environment.SPACE
+    boxes = np.array([]).reshape(0, 0)
+    targets = np.array([]).reshape(0, 0)
+                
+    # move actor to set location
+    map[actor[0], actor[1]] = environment.SPACE
+    map[loc[0], loc[1]] = environment.ACTOR
+    
+    return environment.State(map, loc, boxes, targets)
+
+def get_distance_table(state):
+    table = {}
+    r, c = state.map.shape
 
     for i in range(r):
         for j in range(c):
-            if int(s.map[i, j]) != environment.WALL:
-                new_state = copy(s)
-                
-                # move actor to set location
-                loc = new_state.actor
-                new_state.map[loc[0], loc[1]] = environment.SPACE
-                new_state.map[i, j] = environment.ACTOR
-                new_state.actor = np.array([i, j])
+            if int(state.map[i, j]) != environment.WALL:
+                new_state = get_clean_state(state, np.array([i, j]))
                 
                 # compute distance matrix for location
                 compute_distance_matrix(table, new_state)
