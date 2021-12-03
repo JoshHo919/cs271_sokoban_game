@@ -26,7 +26,7 @@ class QLearner:
 
     def select_action(self, state):
         feasible_actions = environment.get_feasible_actions(state)
-        epsilon = self.get_epsilon(state)
+        epsilon = self.epsilon
 
         # apply exploration with epsilon-greedy
         if random.random() <= epsilon:
@@ -78,10 +78,14 @@ class QLearner:
             f += self.get_state_action_frequency(state, a)
         return f
 
-    def get_epsilon(self, state):
+    def get_epsilon(self, recent_50):
         #f = self.get_state_frequency(state)
         #return 1 / (2 * (f + 1))
-        return self.epsilon
+        epsilon = 0.1
+        recent_goal_rate = sum(recent_50) / 50
+        if len(recent_50) >= 50 and recent_goal_rate >= 0.2:
+            epsilon /= 2 ** (recent_goal_rate-0.2)
+        return epsilon
 
     def get_delta(self, state, action):
         f = self.get_state_action_frequency(state, action)
@@ -100,8 +104,8 @@ class QLearner:
 
     def learn(self, episodes):
         shortest_solution = []
+        recent_50 = []
         goal_found_list = []
-
         for i in range(episodes):
             state = copy(self.state)
             episode_length = 0
@@ -109,9 +113,9 @@ class QLearner:
             deadlock = False
             states = []
             actions = []
-            
+            self.epsilon = self.get_epsilon(recent_50)
             while episode_length < self.max_episode_length:
-                
+
                 # exit if goal or deadlock is reached
                 if environment.is_goal(state):
                     # update q-values of path if goal is reached
@@ -119,11 +123,13 @@ class QLearner:
                     if len(actions) < len(shortest_solution) or len(shortest_solution) == 0:
                         shortest_solution = actions
                     goal_found = True
+                    recent_50.append(1)
                     break
                 elif environment.is_deadlock(state):
                     deadlock = True
+                    recent_50.append(0)
                     break
-                
+
                 action = self.select_action(state)
                 states.append(state)
                 actions.append(action)
@@ -136,8 +142,11 @@ class QLearner:
                 state = new_state
 
                 episode_length += 1
+            if episode_length == self.max_episode_length:
+                recent_50.append(0)
+            if len(recent_50) > 50:
+                recent_50 = recent_50[1:]
             goal_found_list.append(goal_found)
-
             print(f"Episode {i+1}, length={episode_length}, goal_found={goal_found}, deadlock={deadlock}, max_q={self.get_max_q(state)}")
         print(f"Total goal rate: {sum(goal_found_list) / episodes}")
         print(f"Last 100 goal rate: {sum(goal_found_list[-100:]) / 100}")

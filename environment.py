@@ -16,8 +16,8 @@ LEFT = np.array([0, -1])
 RIGHT = np.array([0, 1])
 actions = {'UP': UP, 'LEFT': LEFT, 'DOWN': DOWN, 'RIGHT': RIGHT}
 
-BASIC_REWARD = {'SPACE': -0.5, 'BOX_BY_BOX': -10, 'BOX_BY_WALL': -5, 'INFEASIBLE': -9999,\
-                'ON_TARGET': 25, 'ON_SPACE': -1, 'OFF_TARGET': -50, 'DEADLOCK': -10e10, 'GOAL': 10e10}
+BASIC_REWARD = {'SPACE': -20, 'BOX_BY_BOX': -4, 'BOX_BY_WALL': -2, 'INFEASIBLE': -9999,\
+                'ON_TARGET': 30, 'ON_SPACE': -15, 'OFF_TARGET': -50, 'DEADLOCK': -10e10, 'GOAL': 10e10}
 
 class State:
     def __init__(self, map_array, actor, boxes, targets):
