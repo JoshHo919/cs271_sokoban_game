@@ -139,18 +139,14 @@ def step(state, action):
 def get_feasible_actions(state):
     feasible_actions = []
     for action in actions:
-        next_position = state.actor + actions[action]
-        next_two_position = next_position + actions[action]
-        if state.map[next_position[0], next_position[1]] in [SPACE, TARGET] or \
-                (state.map[next_position[0], next_position[1]] == BOX and \
-                    state.map[next_two_position[0], next_two_position[1]] not in [BOX, WALL, BOX_ON_TARGET]):
+        if is_feasible_action(state, action):
             feasible_actions.append(action)
     return feasible_actions
 
 def get_reward(state, action, new_state):
     reward = 0
-    next_position = state.actor + actions[action]
 
+<<<<<<< Updated upstream
     if state.map[next_position[0], next_position[1]] in [SPACE, TARGET]:
         reward = BASIC_REWARD['SPACE']
     elif state.map[next_position[0], next_position[1]] in [BOX, BOX_ON_TARGET]:
@@ -182,7 +178,71 @@ def get_reward(state, action, new_state):
             reward += BASIC_REWARD['GOAL']
         elif is_deadlock(new_state):
             reward += BASIC_REWARD['DEADLOCK']
+=======
+    if is_feasible_action(state, action):
+        next_position = state.actor + actions[action]
+        next_pos_status = get_location_status(state, next_position)
+        if next_pos_status in [SPACE, TARGET]:
+            reward = BASIC_REWARD['SPACE']
+        elif next_pos_status in [BOX, BOX_ON_TARGET]:
+            box_next_position = next_position + actions[action]
+            if not is_out_of_bounds(state, box_next_position):
+                box_next_pos_status = get_location_status(state, box_next_position)
+                # push box off target
+                if next_pos_status == BOX_ON_TARGET:
+                    if box_next_pos_status == SPACE:
+                        reward += BASIC_REWARD['OFF_TARGET']
+                    elif box_next_pos_status == TARGET:
+                        reward += BASIC_REWARD['ON_TARGET']
+                elif next_pos_status == BOX:
+                    # infeasible push
+                    if box_next_pos_status in [WALL, BOX, BOX_ON_TARGET]:
+                        reward += BASIC_REWARD['INFEASIBLE']
+                    elif box_next_pos_status == TARGET:
+                        reward += BASIC_REWARD['ON_TARGET']
+                    elif box_next_pos_status == SPACE:
+                        reward += BASIC_REWARD['ON_SPACE']
+                        loc = box_next_position + actions[action]
+                        
+                        if not is_out_of_bounds(state, loc):
+                            loc_status = get_location_status(state, loc)
+                            # push box next to another box
+                            if loc_status == BOX:
+                                reward += BASIC_REWARD['BOX_BY_BOX']
+                            # push box next to wall
+                            elif loc_status == WALL:
+                                reward += BASIC_REWARD['BOX_BY_WALL']
+                        else:
+                            # if the box is pushed next to the border we also consider it box by wall
+                            reward += BASIC_REWARD['BOX_BY_WALL']
+            else:
+                reward += BASIC_REWARD['INFEASIBLE']
+    else:
+        reward += BASIC_REWARD['INFEASIBLE']
+
+    if is_goal(new_state):
+        reward += BASIC_REWARD['GOAL']
+    elif is_deadlock(new_state):
+        reward += BASIC_REWARD['DEADLOCK']
+
+>>>>>>> Stashed changes
     return reward
+
+def get_location_status(state, loc):
+    return state.map[loc[0], loc[1]]
+
+# returns true if action is feasible in state, false otherwise
+def is_feasible_action(state, action):
+    next_position = state.actor + actions[action]
+    if not is_out_of_bounds(state, next_position):
+        if get_location_status(state, next_position) in [SPACE, TARGET]:
+            return True
+        next_two_position = next_position + actions[action]
+        if not is_out_of_bounds(state, next_two_position):
+            if (get_location_status(state, next_position) == BOX and \
+                get_location_status(state, next_two_position) not in [BOX, WALL, BOX_ON_TARGET]):
+                return True
+    return False
 
 def is_goal(state):
     count = 0
@@ -199,7 +259,7 @@ def is_deadlock(state):
 
 def is_out_of_bounds(state, loc):
     r, c = state.map.shape
-    return (loc[0] < 0 or loc[0] >= r) and (loc[1] < 0 or loc[1] >= c)
+    return (loc[0] < 0 or loc[0] >= r) or (loc[1] < 0 or loc[1] >= c)
 
 # returns true if a box at loc is immovable
 def is_immovable(state, loc):

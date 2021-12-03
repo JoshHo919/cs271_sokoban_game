@@ -8,7 +8,7 @@ class QLearner:
         self.state = state # initial state
         self.q_table = {}
         self.f_table = {}
-        self.discount_factor = 0.8
+        self.discount_factor = 0.96
         self.learning_rate = 0.5
         self.epsilon = 0.1
 
