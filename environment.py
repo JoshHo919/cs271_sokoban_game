@@ -146,39 +146,6 @@ def get_feasible_actions(state):
 def get_reward(state, action, new_state):
     reward = 0
 
-<<<<<<< Updated upstream
-    if state.map[next_position[0], next_position[1]] in [SPACE, TARGET]:
-        reward = BASIC_REWARD['SPACE']
-    elif state.map[next_position[0], next_position[1]] in [BOX, BOX_ON_TARGET]:
-        box_position = next_position + actions[action]
-        box_next_position = box_position + actions[action]
-
-        # push box off target
-        if state.map[next_position[0], next_position[1]] == BOX_ON_TARGET:
-            if state.map[box_position[0], box_position[1]] == SPACE:
-                reward += BASIC_REWARD['OFF_TARGET']
-            elif state.map[box_position[0], box_position[1]] == TARGET:
-                reward += BASIC_REWARD['ON_TARGET']
-
-        elif state.map[next_position[0], next_position[1]] == BOX:
-            # infeasible push
-            if state.map[box_position[0], box_position[1]] == TARGET:
-                reward += BASIC_REWARD['ON_TARGET']
-            elif is_immovable(state, box_position):
-                reward += BASIC_REWARD['INFEASIBLE']
-            elif state.map[box_position[0], box_position[1]] == SPACE:
-                reward += BASIC_REWARD['ON_SPACE']
-                # push box next to another box
-                if state.map[box_next_position[0], box_next_position[1]] == BOX:
-                    reward += BASIC_REWARD['BOX_BY_BOX']
-                # push box next to wall
-                elif state.map[box_next_position[0], box_next_position[1]] == WALL:
-                    reward += BASIC_REWARD['BOX_BY_WALL']
-        if is_goal(new_state):
-            reward += BASIC_REWARD['GOAL']
-        elif is_deadlock(new_state):
-            reward += BASIC_REWARD['DEADLOCK']
-=======
     if is_feasible_action(state, action):
         next_position = state.actor + actions[action]
         next_pos_status = get_location_status(state, next_position)
@@ -225,7 +192,6 @@ def get_reward(state, action, new_state):
     elif is_deadlock(new_state):
         reward += BASIC_REWARD['DEADLOCK']
 
->>>>>>> Stashed changes
     return reward
 
 def get_location_status(state, loc):
@@ -247,13 +213,13 @@ def is_feasible_action(state, action):
 def is_goal(state):
     count = 0
     for t in state.targets:
-        if state.map[t[0], t[1]] == TARGET:
+        if get_location_status(state, t) == TARGET:
             count += 1
     return count == 0
 
 def is_deadlock(state):
     for loc in state.boxes:
-        if is_immovable(state, loc) and state.map[loc[0], loc[1]] != BOX_ON_TARGET:
+        if is_immovable(state, loc) and get_location_status(state, loc) != BOX_ON_TARGET:
             return True
     return False
 
@@ -268,9 +234,8 @@ def is_immovable(state, loc):
         n2 = loc + actions[a2]
 
         # are n1, n2 occupied by wall/block?
-        o1 = is_out_of_bounds(state, n1) or state.map[n1[0], n1[1]] in [WALL, BOX, BOX_ON_TARGET]
-        o2 = is_out_of_bounds(state, n2) or state.map[n2[0], n2[1]] in [WALL, BOX, BOX_ON_TARGET]
-
+        o1 = is_out_of_bounds(state, n1) or get_location_status(state, n1) in [WALL, BOX, BOX_ON_TARGET]
+        o2 = is_out_of_bounds(state, n2) or get_location_status(state, n2) in [WALL, BOX, BOX_ON_TARGET]
         if o1 and o2:
             return True
     return False
