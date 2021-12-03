@@ -81,10 +81,10 @@ class QLearner:
     def get_epsilon(self, recent_50):
         #f = self.get_state_frequency(state)
         #return 1 / (2 * (f + 1))
-        epsilon = 0.1
+        epsilon = 0.05
         recent_goal_rate = sum(recent_50) / 50
-        if len(recent_50) >= 50 and recent_goal_rate >= 0.2:
-            epsilon /= 2 ** (recent_goal_rate-0.2)
+        if len(recent_50) >= 50 and recent_goal_rate >= 0.5:
+            epsilon /= 5 ** ((recent_goal_rate-0.4)*10)
         return epsilon
 
     def get_delta(self, state, action):
@@ -93,7 +93,7 @@ class QLearner:
 
     def get_learning_rate(self, state, action):
         f = self.get_state_action_frequency(state, action)
-        return 1 / (2 * (f + 1))
+        return 1 / (1.2 * (f + 0.5))
         #return self.learning_rate
 
     def backtracking_update(self, state_actions):
@@ -141,9 +141,12 @@ class QLearner:
                 self.update_q_value(state, action, new_state, reward)
                 state = new_state
 
+
                 episode_length += 1
             if episode_length == self.max_episode_length:
                 recent_50.append(0)
+                if sum(goal_found_list[-100:]) / 100 > 0.9:
+                    print(state.map)
             if len(recent_50) > 50:
                 recent_50 = recent_50[1:]
             goal_found_list.append(goal_found)
