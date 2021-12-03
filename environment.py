@@ -16,8 +16,8 @@ LEFT = np.array([0, -1])
 RIGHT = np.array([0, 1])
 actions = {'UP': UP, 'LEFT': LEFT, 'DOWN': DOWN, 'RIGHT': RIGHT}
 
-BASIC_REWARD = {'SPACE': -20, 'BOX_BY_BOX': -4, 'BOX_BY_WALL': -2, 'INFEASIBLE': -9999,\
-                'ON_TARGET': 30, 'ON_SPACE': -15, 'OFF_TARGET': -50, 'DEADLOCK': -10e10, 'GOAL': 10e10}
+BASIC_REWARD = {'SPACE': -30, 'BOX_BY_BOX': -4, 'BOX_BY_WALL': -0, 'INFEASIBLE': -199,\
+                'ON_TARGET': 100, 'ON_SPACE': -20, 'OFF_TARGET': -50, 'DEADLOCK': -10e10, 'GOAL': 10e10}
 
 class State:
     def __init__(self, map_array, actor, boxes, targets):
@@ -166,10 +166,10 @@ def get_reward(state, action, new_state):
 
         elif state.map[next_position[0], next_position[1]] == BOX:
             # infeasible push
-            if state.map[box_position[0], box_position[1]] in [WALL, BOX, BOX_ON_TARGET]:
-                reward += BASIC_REWARD['INFEASIBLE']
-            elif state.map[box_position[0], box_position[1]] == TARGET:
+            if state.map[box_position[0], box_position[1]] == TARGET:
                 reward += BASIC_REWARD['ON_TARGET']
+            elif is_immovable(state, box_position):
+                reward += BASIC_REWARD['INFEASIBLE']
             elif state.map[box_position[0], box_position[1]] == SPACE:
                 reward += BASIC_REWARD['ON_SPACE']
                 # push box next to another box
