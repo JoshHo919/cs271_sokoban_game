@@ -192,9 +192,10 @@ def is_goal(state):
     return count == 0
 
 def is_deadlock(state):
-    if len(get_feasible_actions(state)) == 0:
-        return False
-    return all([is_immovable(state, loc) for loc in state.boxes])
+    for loc in state.boxes:
+        if is_immovable(state, loc) and state.map[loc[0], loc[1]] != BOX_ON_TARGET:
+            return True
+    return False
 
 def is_out_of_bounds(state, loc):
     r, c = state.map.shape
