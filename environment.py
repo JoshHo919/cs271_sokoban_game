@@ -215,10 +215,10 @@ def is_feasible_action(state, action):
 
 def is_goal(state):
     count = 0
-    for t in state.targets:
-        if get_location_status(state, t) == TARGET:
+    for b in state.boxes:
+        if get_location_status(state, b) == BOX_ON_TARGET:
             count += 1
-    return count == 0
+    return count == len(state.boxes)
 
 def is_deadlock(state):
     for loc in state.boxes:
@@ -258,8 +258,12 @@ def is_immovable(state, loc):
                                     return True
     return False
 
-def verify_solution(state, actions):
+def verify_solution(state, actions, display=False):
     s = copy(state)
+    if display:
+        print(s.map)
     for a in actions:
         s = step(s, a)
+        if display:
+            print(s.map)
     return is_goal(s)
