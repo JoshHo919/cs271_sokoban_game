@@ -154,3 +154,4 @@ class QLearner:
         print(f"Total goal rate: {sum(goal_found_list) / episodes}")
         print(f"Last 100 goal rate: {sum(goal_found_list[-100:]) / 100}")
         print(f"Shortest solution has length {len(shortest_solution)}: {shortest_solution}")
+        print(f"Verify solution: {environment.verify_solution(self.state, shortest_solution)}")

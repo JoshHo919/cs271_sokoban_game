@@ -2,6 +2,7 @@ import numpy as np
 from copy import copy
 from dataclasses import dataclass
 
+INFEASIBLE = -1
 SPACE = 0
 ACTOR = 1
 WALL = 2
@@ -195,6 +196,8 @@ def get_reward(state, action, new_state):
     return reward
 
 def get_location_status(state, loc):
+    if is_out_of_bounds(state, loc):
+        return INFEASIBLE
     return state.map[loc[0], loc[1]]
 
 # returns true if action is feasible in state, false otherwise
@@ -232,10 +235,31 @@ def is_immovable(state, loc):
     for a1, a2 in [('UP', 'RIGHT'), ('RIGHT', 'DOWN'), ('DOWN', 'LEFT'), ('LEFT', 'UP')]:
         n1 = loc + actions[a1]
         n2 = loc + actions[a2]
+        n1_status = get_location_status(state, n1)
+        n2_status = get_location_status(state, n2)
 
-        # are n1, n2 occupied by wall/block?
-        o1 = is_out_of_bounds(state, n1) or get_location_status(state, n1) in [WALL, BOX, BOX_ON_TARGET]
-        o2 = is_out_of_bounds(state, n2) or get_location_status(state, n2) in [WALL, BOX, BOX_ON_TARGET]
+        # are n1, n2 occupied by wall?
+        o1 = n1_status in [WALL, INFEASIBLE, BOX, BOX_ON_TARGET]
+        o2 = n2_status in [WALL, INFEASIBLE, BOX, BOX_ON_TARGET]
         if o1 and o2:
-            return True
+            if n1_status in [WALL, INFEASIBLE] and n2_status in [WALL, INFEASIBLE]:
+                return True
+            else:
+                for n, status, a in [(n1, n1_status, a1), (n2, n2_status, a2)]:
+                    if status in [BOX, BOX_ON_TARGET]:
+                        for dir1, dir2 in [(['UP', 'DOWN'], ['LEFT', 'RIGHT']), (['LEFT', 'RIGHT'], ['UP', 'DOWN'])]:
+                            # detect 2 box placement
+                            if a in dir1:
+                                l1 = [loc + actions[x] for x in dir2]
+                                l2 = [n + actions[x] for x in dir2]
+                                loc_blocked = any([get_location_status(state, x) in [WALL, INFEASIBLE, BOX, BOX_ON_TARGET] for x in l1])
+                                n_blocked = any([get_location_status(state, x) in [WALL, INFEASIBLE, BOX, BOX_ON_TARGET] for x in l2])
+                                if loc_blocked and n_blocked:
+                                    return True
     return False
+
+def verify_solution(state, actions):
+    s = copy(state)
+    for a in actions:
+        s = step(s, a)
+    return is_goal(s)
