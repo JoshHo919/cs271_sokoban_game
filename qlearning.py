@@ -78,23 +78,20 @@ class QLearner:
             f += self.get_state_action_frequency(state, a)
         return f
 
-    def get_epsilon(self, recent_50):
-        #f = self.get_state_frequency(state)
-        #return 1 / (2 * (f + 1))
+    def get_epsilon(self, goal_found_list):
+        lookback = 50
         epsilon = 0.05
-        recent_goal_rate = sum(recent_50) / 50
-        if len(recent_50) >= 50 and recent_goal_rate >= 0.5:
+        recent_goal_rate = sum(goal_found_list[-lookback:]) / lookback
+        if len(goal_found_list) >= lookback and recent_goal_rate >= 0.5:
             epsilon /= 5 ** ((recent_goal_rate-0.4)*10)
         return epsilon
 
     def get_delta(self, state, action):
-        f = self.get_state_action_frequency(state, action)
-        return 1 / (f + 1)
+        return self.epsilon / 2
 
     def get_learning_rate(self, state, action):
         f = self.get_state_action_frequency(state, action)
-        return 1 / (1.2 * (f + 0.5))
-        #return self.learning_rate
+        return 1 / (1.2 * (f/2 + 0.5))
 
     def backtracking_update(self, state_actions):
         for s, a in state_actions[::-1]:
@@ -104,8 +101,8 @@ class QLearner:
 
     def learn(self, episodes):
         shortest_solution = []
-        recent_50 = []
         goal_found_list = []
+
         for i in range(episodes):
             state = copy(self.state)
             episode_length = 0
@@ -113,7 +110,8 @@ class QLearner:
             deadlock = False
             states = []
             actions = []
-            self.epsilon = self.get_epsilon(recent_50)
+            self.epsilon = self.get_epsilon(goal_found_list)
+            new_state_actions = 0
             while episode_length < self.max_episode_length:
 
                 # exit if goal or deadlock is reached
@@ -123,16 +121,17 @@ class QLearner:
                     if len(actions) < len(shortest_solution) or len(shortest_solution) == 0:
                         shortest_solution = actions
                     goal_found = True
-                    recent_50.append(1)
                     break
                 elif environment.is_deadlock(state):
                     deadlock = True
-                    recent_50.append(0)
                     break
 
                 action = self.select_action(state)
                 states.append(state)
                 actions.append(action)
+                
+                if (state, action) not in self.q_table:
+                    new_state_actions += 1
 
                 new_state = environment.step(state, action)
                 reward = environment.get_reward(state, action, new_state)
@@ -141,17 +140,15 @@ class QLearner:
                 self.update_q_value(state, action, new_state, reward)
                 state = new_state
 
-
                 episode_length += 1
-            if episode_length == self.max_episode_length:
-                recent_50.append(0)
-                if sum(goal_found_list[-100:]) / 100 > 0.9:
-                    print(state.map)
-            if len(recent_50) > 50:
-                recent_50 = recent_50[1:]
             goal_found_list.append(goal_found)
-            print(f"Episode {i+1}, length={episode_length}, goal_found={goal_found}, deadlock={deadlock}, max_q={self.get_max_q(state)}")
-        print(f"Total goal rate: {sum(goal_found_list) / episodes}")
-        print(f"Last 100 goal rate: {sum(goal_found_list[-100:]) / 100}")
+
+            print(f"Episode {i+1}, length={episode_length}, goal_found={goal_found}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/episode_length}")
+            if sum(goal_found_list[-10:]) == 10:
+                print("END LEARNING")
+                break
+        print(f"Total goal rate: {sum(goal_found_list) / i}")
+        if len(goal_found_list) >= 100:
+            print(f"Last 100 goal rate: {sum(goal_found_list[-100:]) / 100}")
         print(f"Shortest solution has length {len(shortest_solution)}: {shortest_solution}")
         print(f"Verify solution: {environment.verify_solution(self.state, shortest_solution)}")
