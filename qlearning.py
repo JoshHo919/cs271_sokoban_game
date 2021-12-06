@@ -143,7 +143,7 @@ class QLearner:
                 episode_length += 1
             goal_found_list.append(goal_found)
 
-            print(f"Episode {i+1}, length={episode_length}, goal_found={goal_found}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/episode_length}")
+            print(f"Step {i+1}, length={episode_length}, goal_found={goal_found}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/episode_length}")
             if sum(goal_found_list[-10:]) == 10:
                 print("END LEARNING")
                 break
