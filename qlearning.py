@@ -99,20 +99,19 @@ class QLearner:
             r = environment.get_reward(s, a, s_a)
             self.update_q_value(s, a, s_a, r)
 
-    def learn(self, episodes):
+    def learn(self, episodes, display=True):
         shortest_solution = []
         goal_found_list = []
 
         for i in range(episodes):
             state = copy(self.state)
-            episode_length = 0
             goal_found = False
             deadlock = False
             states = []
             actions = []
             self.epsilon = self.get_epsilon(goal_found_list)
             new_state_actions = 0
-            while episode_length < self.max_episode_length:
+            for step in range(self.max_episode_length):
 
                 # exit if goal or deadlock is reached
                 if environment.is_goal(state):
@@ -139,16 +138,17 @@ class QLearner:
                 self.update_f_value(state, action)
                 self.update_q_value(state, action, new_state, reward)
                 state = new_state
-
-                episode_length += 1
             goal_found_list.append(goal_found)
 
-            print(f"Step {i+1}, length={episode_length}, goal_found={goal_found}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/episode_length}")
+            if display:
+                print(f"Episode {i+1}, length={step}, goal_found={goal_found}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/step}")
             if sum(goal_found_list[-10:]) == 10:
-                print("END LEARNING")
+                if display:
+                    print("END LEARNING")
                 break
-        print(f"Total goal rate: {sum(goal_found_list) / i}")
-        if len(goal_found_list) >= 100:
-            print(f"Last 100 goal rate: {sum(goal_found_list[-100:]) / 100}")
-        print(f"Shortest solution has length {len(shortest_solution)}: {shortest_solution}")
-        print(f"Verify solution: {environment.verify_solution(self.state, shortest_solution)}")
+        if display:
+            print(f"Total goal rate: {sum(goal_found_list) / i}")
+            if len(goal_found_list) >= 100:
+                print(f"Last 100 goal rate: {sum(goal_found_list[-100:]) / 100}")
+            print(f"Shortest solution has length {len(shortest_solution)}: {shortest_solution}")
+            print(f"Verify solution: {environment.verify_solution(self.state, shortest_solution)}")

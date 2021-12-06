@@ -12,7 +12,7 @@ if __name__ == '__main__':
             episodes = 1000
             init_state = environment.State.from_config(config_text)
             qlearner = QLearner(init_state)
-            qlearner.learn(episodes)
+            qlearner.learn(episodes, display=True)
     else:
         print("No input file specified")
 
