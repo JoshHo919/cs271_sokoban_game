@@ -17,8 +17,8 @@ LEFT = np.array([0, -1])
 RIGHT = np.array([0, 1])
 actions = {'UP': UP, 'LEFT': LEFT, 'DOWN': DOWN, 'RIGHT': RIGHT}
 
-BASIC_REWARD = {'SPACE': -30, 'BOX_BY_BOX': -4, 'BOX_BY_WALL': -0, 'INFEASIBLE': -199,\
-                'ON_TARGET': 100, 'ON_SPACE': -20, 'OFF_TARGET': -50, 'DEADLOCK': -10e10, 'GOAL': 10e10}
+BASIC_REWARD = {'SPACE': -5, 'BOX_BY_BOX': -5, 'BOX_BY_WALL': -10, 'INFEASIBLE': -199,\
+                'ON_TARGET': 200, 'ON_SPACE': -1, 'OFF_TARGET': -200, 'DEADLOCK': -10e10, 'GOAL': 10e10}
 
 class State:
     def __init__(self, map_array, actor, boxes, targets):
@@ -257,13 +257,3 @@ def is_immovable(state, loc):
                                 if loc_blocked and n_blocked:
                                     return True
     return False
-
-def verify_solution(state, actions, display=False):
-    s = copy(state)
-    if display:
-        print(s.map)
-    for a in actions:
-        s = step(s, a)
-        if display:
-            print(s.map)
-    return is_goal(s)

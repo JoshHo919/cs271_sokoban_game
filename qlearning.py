@@ -1,6 +1,7 @@
 import environment
 import heuristics
 import random
+import numpy as np
 from copy import copy
 
 class QLearner:
@@ -11,12 +12,13 @@ class QLearner:
         self.discount_factor = 0.96
         self.learning_rate = 0.5
         self.epsilon = 0.1
+        self.t = 1 # total time step
 
         self.distance_table = heuristics.get_distance_table(self.state)
         self.heuristics = [heuristics.EMMHeuristic(self.distance_table), heuristics.AgentBoxHeuristic(self.distance_table)]
         self.h_weight = [2, 1] # relative importance of heuristics
 
-        self.max_episode_length = 500
+        self.max_episode_length = 750
 
     def heuristic(self, state):
         h_val = 0
@@ -24,14 +26,28 @@ class QLearner:
             h_val += self.h_weight[i] * h.heuristic(state)
         return h_val
 
-    def select_action(self, state):
+    def select_action(self, state, greedy=False):
         feasible_actions = environment.get_feasible_actions(state)
-        epsilon = self.epsilon
+        if greedy:
+            epsilon = self.epsilon
+            # apply exploration with epsilon-greedy
+            if random.random() <= epsilon:
+                return random.choice(feasible_actions)
+            else:
+                max_action = None
+                max_val = -10e10
+                h = self.heuristic(state)
+                for a in feasible_actions:
+                    delta = self.get_delta(state, a)
+                    s_a = environment.step(state, a)
+                    delta_h = 50 * (h - self.heuristic(s_a))
+                    val = (1 - delta) * self.get_q_value(state, a) + delta * delta_h
 
-        # apply exploration with epsilon-greedy
-        if random.random() <= epsilon:
-            return random.choice(feasible_actions)
+                    if val > max_val:
+                        max_val = val
+                        max_action = a
         else:
+            c = 1.5
             max_action = None
             max_val = -10e10
             h = self.heuristic(state)
@@ -39,12 +55,18 @@ class QLearner:
                 delta = self.get_delta(state, a)
                 s_a = environment.step(state, a)
                 delta_h = h - self.heuristic(s_a)
-                val = (1 - delta) * self.get_q_value(state, a) + delta * delta_h
+                ucb = self.get_q_value(state, a)
+                if self.get_state_action_frequency(state, a) > 0:
+                    ucb += c * np.sqrt(np.log(self.t) / self.get_state_action_frequency(state, a))
+                val = (1 - delta) * ucb + delta * delta_h
+                #print(ucb)
+                #val = ucb
 
                 if val > max_val:
                     max_val = val
                     max_action = a
-            return max_action
+        return max_action
+
 
     def update_q_value(self, state, action, new_state, reward):
         learning_rate = self.get_learning_rate(state, action)
@@ -87,7 +109,7 @@ class QLearner:
         return epsilon
 
     def get_delta(self, state, action):
-        return self.epsilon / 2
+        return 1 / (self.t / 10 + 1)
 
     def get_learning_rate(self, state, action):
         f = self.get_state_action_frequency(state, action)
@@ -112,11 +134,9 @@ class QLearner:
             self.epsilon = self.get_epsilon(goal_found_list)
             new_state_actions = 0
             for step in range(self.max_episode_length):
-
                 # exit if goal or deadlock is reached
                 if environment.is_goal(state):
                     # update q-values of path if goal is reached
-                    self.backtracking_update(list(zip(states, actions)))
                     if len(actions) < len(shortest_solution) or len(shortest_solution) == 0:
                         shortest_solution = actions
                     goal_found = True
@@ -138,17 +158,19 @@ class QLearner:
                 self.update_f_value(state, action)
                 self.update_q_value(state, action, new_state, reward)
                 state = new_state
-            goal_found_list.append(goal_found)
+                self.t += 1
+            if goal_found:
+                break
+            self.backtracking_update(list(zip(states, actions)))
 
             if display:
-                print(f"Episode {i+1}, length={step}, goal_found={goal_found}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/step}")
-            if sum(goal_found_list[-10:]) == 10:
-                if display:
-                    print("END LEARNING")
-                break
+                print(f"Episode {i+1}, length={step}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/step}")
+            if True:
+                for s in states[-1:]:
+                    #print(s.map)
+                    pass
+                s_a = environment.step(states[-1], actions[-1])
+                print(s_a.map)
         if display:
-            print(f"Total goal rate: {sum(goal_found_list) / i}")
-            if len(goal_found_list) >= 100:
-                print(f"Last 100 goal rate: {sum(goal_found_list[-100:]) / 100}")
             print(f"Shortest solution has length {len(shortest_solution)}: {shortest_solution}")
-            print(f"Verify solution: {environment.verify_solution(self.state, shortest_solution)}")
+        return i, len(shortest_solution)
