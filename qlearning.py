@@ -16,7 +16,7 @@ class QLearner:
         self.heuristics = [heuristics.EMMHeuristic(self.distance_table), heuristics.AgentBoxHeuristic(self.distance_table)]
         self.h_weight = [2, 1] # relative importance of heuristics
 
-        self.max_episode_length = 500
+        self.max_episode_length = 1000
 
     def heuristic(self, state):
         h_val = 0
@@ -26,6 +26,10 @@ class QLearner:
 
     def select_action(self, state):
         feasible_actions = environment.get_feasible_actions(state)
+        # if state.test:
+        #     print(state.map)
+        #     print(feasible_actions)
+        #     state.test = False
         epsilon = self.epsilon
 
         # apply exploration with epsilon-greedy
@@ -122,6 +126,7 @@ class QLearner:
                     goal_found = True
                     break
                 elif environment.is_deadlock(state):
+                    # print(state.map)
                     deadlock = True
                     break
 
@@ -142,7 +147,7 @@ class QLearner:
 
             if display:
                 print(f"Episode {i+1}, length={step}, goal_found={goal_found}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/step}")
-            if sum(goal_found_list[-10:]) == 10:
+            if sum(goal_found_list[-10:]) == 1:
                 if display:
                     print("END LEARNING")
                 break

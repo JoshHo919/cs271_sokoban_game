@@ -17,8 +17,8 @@ LEFT = np.array([0, -1])
 RIGHT = np.array([0, 1])
 actions = {'UP': UP, 'LEFT': LEFT, 'DOWN': DOWN, 'RIGHT': RIGHT}
 
-BASIC_REWARD = {'SPACE': -30, 'BOX_BY_BOX': -4, 'BOX_BY_WALL': -0, 'INFEASIBLE': -199,\
-                'ON_TARGET': 100, 'ON_SPACE': -20, 'OFF_TARGET': -50, 'DEADLOCK': -10e10, 'GOAL': 10e10}
+BASIC_REWARD = {'SPACE': -30, 'BOX_BY_BOX': -3, 'BOX_BY_WALL': -5, 'INFEASIBLE': -199, \
+                'ON_TARGET': 100, 'ON_SPACE': -20, 'OFF_TARGET': -100, 'DEADLOCK': -10e10, 'GOAL': 10e10}
 
 class State:
     def __init__(self, map_array, actor, boxes, targets):
@@ -27,6 +27,7 @@ class State:
         self.boxes = np.copy(boxes)
         self.targets = np.copy(targets)
         self.key = state_hash(self)
+        self.test = False
 
     @classmethod
     def from_config(cls, config_text):
@@ -108,28 +109,35 @@ def step(state, action):
     # 5. box -> target: move onto target
 
     # update actor's current position for the new state depends on current actor on target or space
-    new_state.map[state.actor[0]][state.actor[1]] = SPACE \
-        if state.map[state.actor[0]][state.actor[1]] == ACTOR else TARGET
+    if state.map[state.actor[0]][state.actor[1]] == ACTOR:
+        new_state.map[state.actor[0]][state.actor[1]] = SPACE
+    elif state.map[state.actor[0]][state.actor[1]] == ACTOR_ON_TARGET:
+        new_state.map[state.actor[0]][state.actor[1]] = TARGET
 
     # if next actor position is space
     if state.map[next_position[0]][next_position[1]] == SPACE:
         new_state.map[next_position[0]][next_position[1]] = ACTOR
     # if next actor position is box
-    elif state.map[next_position[0]][next_position[1]] == BOX:
+    elif state.map[next_position[0]][next_position[1]] in [BOX, BOX_ON_TARGET]:
         # the position box will be pushed on
         next_two_position = next_position + actions[action]
-        if state.map[next_two_position[0]][next_two_position[1]] in [SPACE, TARGET]:
-            new_state.map[next_position[0]][next_position[1]] = ACTOR
-            new_state.map[next_two_position[0]][next_two_position[1]] = BOX if \
-                state.map[next_two_position[0]][next_two_position[1]] == SPACE else BOX_ON_TARGET
-            # modify box location been pushed
-            for i in range(len(new_state.boxes)):
-                if np.array_equal(new_state.boxes[i], next_position):
-                    new_state.boxes[i] = next_two_position
-                    break
+
+        new_state.map[next_position[0]][next_position[1]] = ACTOR \
+            if state.map[next_position[0]][next_position[1]] == BOX else ACTOR_ON_TARGET
+
+        new_state.map[next_two_position[0]][next_two_position[1]] = BOX if \
+            state.map[next_two_position[0]][next_two_position[1]] == SPACE else BOX_ON_TARGET
+
+        # modify box location been pushed
+        for i in range(len(new_state.boxes)):
+            if np.array_equal(new_state.boxes[i], next_position):
+                new_state.boxes[i] = next_two_position
+                break
         
     elif state.map[next_position[0]][next_position[1]] == TARGET:
         new_state.map[next_position[0]][next_position[1]] = ACTOR_ON_TARGET
+
+
 
     # update actor position in the new state
     new_state.actor = next_position
@@ -144,6 +152,14 @@ def get_feasible_actions(state):
             feasible_actions.append(action)
     return feasible_actions
 
+def count_walls(state, position):
+    count = 0
+    for action in actions:
+        next_position = position + actions[action]
+        next_pos_status = get_location_status(state, next_position)
+        if next_pos_status == WALL:
+            count += 1
+    return count
 def get_reward(state, action, new_state):
     reward = 0
 
@@ -161,13 +177,35 @@ def get_reward(state, action, new_state):
                     if box_next_pos_status == SPACE:
                         reward += BASIC_REWARD['OFF_TARGET']
                     elif box_next_pos_status == TARGET:
-                        reward += BASIC_REWARD['ON_TARGET']
+                        new_state.test = True
+                        reward += BASIC_REWARD['ON_TARGET'] ** 2
+                        wall_count = count_walls(state, box_next_position)
+                        if wall_count >= 2:
+                            reward *= (wall_count - 1) * 1000
+                        box_next_position = box_next_position + actions[action]
+                        while not is_out_of_bounds(state, box_next_position):
+                            box_next_pos_status = get_location_status(state, box_next_position)
+                            if box_next_pos_status == TARGET:
+                                reward *= 5
+                            else:
+                                break;
+                            box_next_position = box_next_position + actions[action]
                 elif next_pos_status == BOX:
                     # infeasible push
+
                     if box_next_pos_status in [WALL, BOX, BOX_ON_TARGET]:
                         reward += BASIC_REWARD['INFEASIBLE']
                     elif box_next_pos_status == TARGET:
                         reward += BASIC_REWARD['ON_TARGET']
+
+                        box_next_position = box_next_position + actions[action]
+                        while not is_out_of_bounds(state, box_next_position):
+                            box_next_pos_status = get_location_status(state, box_next_position)
+                            if box_next_pos_status == TARGET:
+                                reward += BASIC_REWARD['ON_TARGET']
+                            else:
+                                break;
+                            box_next_position = box_next_position + actions[action]
                     elif box_next_pos_status == SPACE:
                         reward += BASIC_REWARD['ON_SPACE']
                         loc = box_next_position + actions[action]
@@ -208,7 +246,7 @@ def is_feasible_action(state, action):
             return True
         next_two_position = next_position + actions[action]
         if not is_out_of_bounds(state, next_two_position):
-            if (get_location_status(state, next_position) == BOX and \
+            if (get_location_status(state, next_position) in [BOX, BOX_ON_TARGET] and \
                 get_location_status(state, next_two_position) not in [BOX, WALL, BOX_ON_TARGET]):
                 return True
     return False
