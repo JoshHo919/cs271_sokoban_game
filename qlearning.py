@@ -59,7 +59,7 @@ class QLearner:
             for a in feasible_actions:
                 delta = self.get_delta(state, a)
                 s_a = environment.step(state, a)
-                delta_h = h - self.heuristic(s_a)
+                delta_h = 20 * (h - self.heuristic(s_a))
                 ucb = self.get_q_value(state, a)
                 if self.get_state_action_frequency(state, a) > 0:
                     ucb += c * np.sqrt(np.log(self.t) / self.get_state_action_frequency(state, a))
@@ -146,7 +146,7 @@ class QLearner:
                         shortest_solution = actions
                     goal_found = True
                     break
-                elif environment.is_deadlock(state):
+                elif len(actions) and environment.is_deadlock(state, actions[-1]):
                     # print(state.map)
                     deadlock = True
                     break
@@ -167,16 +167,16 @@ class QLearner:
                 self.t += 1
             if goal_found:
                 break
-            self.backtracking_update(list(zip(states, actions)))
+            #self.backtracking_update(list(zip(states, actions)))
 
             if display:
                 print(f"Episode {i+1}, length={step}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/step}")
-            if True:
+            if False:
                 for s in states[-1:]:
-                    #print(s.map)
+                    print(s.map)
                     pass
                 s_a = environment.step(states[-1], actions[-1])
-                #print(s_a.map)
+                print(s_a.map)
         if display:
             print(f"Shortest solution has length {len(shortest_solution)}: {shortest_solution}")
         return i, len(shortest_solution)

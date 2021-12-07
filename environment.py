@@ -17,8 +17,8 @@ LEFT = np.array([0, -1])
 RIGHT = np.array([0, 1])
 actions = {'UP': UP, 'LEFT': LEFT, 'DOWN': DOWN, 'RIGHT': RIGHT}
 
-BASIC_REWARD = {'SPACE': -30, 'BOX_BY_BOX': -3, 'BOX_BY_WALL': -5, 'INFEASIBLE': -199, \
-                'ON_TARGET': 100, 'ON_SPACE': -20, 'OFF_TARGET': -100, 'DEADLOCK': -10e10, 'GOAL': 10e10}
+BASIC_REWARD = {'SPACE': -10, 'BOX_BY_BOX': -3, 'BOX_BY_WALL': -5, 'INFEASIBLE': -199, \
+                'ON_TARGET': 100, 'ON_SPACE': 0, 'OFF_TARGET': -100, 'DEADLOCK': -10e10, 'GOAL': 10e10}
 
 class State:
     def __init__(self, map_array, actor, boxes, targets):
@@ -137,8 +137,6 @@ def step(state, action):
     elif state.map[next_position[0]][next_position[1]] == TARGET:
         new_state.map[next_position[0]][next_position[1]] = ACTOR_ON_TARGET
 
-
-
     # update actor position in the new state
     new_state.actor = next_position
     new_state.key = state_hash(new_state)
@@ -160,6 +158,7 @@ def count_walls(state, position):
         if next_pos_status == WALL:
             count += 1
     return count
+
 def get_reward(state, action, new_state):
     reward = 0
 
@@ -228,7 +227,7 @@ def get_reward(state, action, new_state):
 
     if is_goal(new_state):
         reward += BASIC_REWARD['GOAL']
-    elif is_deadlock(new_state):
+    elif is_deadlock(new_state, action):
         reward += BASIC_REWARD['DEADLOCK']
 
     return reward
@@ -258,15 +257,42 @@ def is_goal(state):
             count += 1
     return count == len(state.boxes)
 
-def is_deadlock(state):
+# state: current state
+# action: action used to get to current state 
+def is_deadlock(state, action):
     for loc in state.boxes:
         if is_immovable(state, loc) and get_location_status(state, loc) != BOX_ON_TARGET:
             return True
+
+    loc = state.actor + actions[action]
+    loc2 = loc + actions[action]
+    if get_location_status(state, loc) == BOX and get_location_status(state, loc2) in [WALL, INFEASIBLE]:
+        for dir, perp in [(['UP', 'DOWN'], ['LEFT', 'RIGHT']), (['LEFT', 'RIGHT'], ['UP', 'DOWN'])]:
+            if action in dir:
+                cts = True
+                target_count = 0
+                box_count = 0
+                
+                for a in perp:
+                    l = loc + actions[a]
+                    while get_location_status(state, l) not in [WALL, INFEASIBLE]:
+                        if get_location_status(state, l) == TARGET:
+                            target_count += 1
+                        elif get_location_status(state, l) == BOX:
+                            box_count += 1
+                        j1 = get_location_status(state, l + actions[dir[0]])
+                        j2 = get_location_status(state, l + actions[dir[1]])
+                        if j1 not in [WALL, INFEASIBLE] and j2 not in [WALL, INFEASIBLE]:
+                            cts = False
+                        l += actions[a]
+                if cts and box_count + 1 > target_count:
+                    return True
     return False
 
 def is_out_of_bounds(state, loc):
     r, c = state.map.shape
     return (loc[0] < 0 or loc[0] >= r) or (loc[1] < 0 or loc[1] >= c)
+
 
 # returns true if a box at loc is immovable
 def is_immovable(state, loc):
