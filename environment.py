@@ -17,8 +17,8 @@ LEFT = np.array([0, -1])
 RIGHT = np.array([0, 1])
 actions = {'UP': UP, 'LEFT': LEFT, 'DOWN': DOWN, 'RIGHT': RIGHT}
 
-BASIC_REWARD = {'SPACE': -10, 'BOX_BY_BOX': -3, 'BOX_BY_WALL': -5, 'INFEASIBLE': -199, \
-                'ON_TARGET': 100, 'ON_SPACE': 0, 'OFF_TARGET': -100, 'DEADLOCK': -10e10, 'GOAL': 10e10}
+BASIC_REWARD = {'SPACE': -2, 'BOX_OFF_WALL': 0.6, 'BOX_BY_WALL': -1.1, 'INFEASIBLE': -199, \
+                'ON_TARGET': 150, 'ON_SPACE': -1, 'OFF_TARGET': -200, 'DEADLOCK': -10e10, 'GOAL': 10e10}
 
 class State:
     def __init__(self, map_array, actor, boxes, targets):
@@ -155,7 +155,7 @@ def count_walls(state, position):
     for action in actions:
         next_position = position + actions[action]
         next_pos_status = get_location_status(state, next_position)
-        if next_pos_status == WALL:
+        if next_pos_status in [WALL, BOX_ON_TARGET, BOX]:
             count += 1
     return count
 
@@ -201,25 +201,19 @@ def get_reward(state, action, new_state):
                         while not is_out_of_bounds(state, box_next_position):
                             box_next_pos_status = get_location_status(state, box_next_position)
                             if box_next_pos_status == TARGET:
-                                reward += BASIC_REWARD['ON_TARGET']
+                                reward += BASIC_REWARD['ON_TARGET'] * 2
                             else:
                                 break
                             box_next_position = box_next_position + actions[action]
                     elif box_next_pos_status == SPACE:
                         reward += BASIC_REWARD['ON_SPACE']
-                        loc = box_next_position + actions[action]
-                        
-                        if not is_out_of_bounds(state, loc):
-                            loc_status = get_location_status(state, loc)
-                            # push box next to another box
-                            if loc_status == BOX:
-                                reward += BASIC_REWARD['BOX_BY_BOX']
-                            # push box next to wall
-                            elif loc_status == WALL:
-                                reward += BASIC_REWARD['BOX_BY_WALL']
+                        current_pos_walls = count_walls(state,next_position)
+                        next_pos_walls = count_walls(state,box_next_position) - 1
+                        wall_diff = next_pos_walls - current_pos_walls
+                        if wall_diff >= 0:
+                            reward += BASIC_REWARD['BOX_BY_WALL'] ** (wall_diff + 1)
                         else:
-                            # if the box is pushed next to the border we also consider it box by wall
-                            reward += BASIC_REWARD['BOX_BY_WALL']
+                            reward += BASIC_REWARD['BOX_OFF_WALL'] * wall_diff
             else:
                 reward += BASIC_REWARD['INFEASIBLE']
     else:

@@ -171,6 +171,7 @@ class QLearner:
 
             if display:
                 print(f"Episode {i+1}, length={step}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/step}")
+
             if False:
                 for s in states[-1:]:
                     print(s.map)
