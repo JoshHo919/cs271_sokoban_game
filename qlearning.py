@@ -26,12 +26,8 @@ class QLearner:
             h_val += self.h_weight[i] * h.heuristic(state)
         return h_val
 
-    def select_action(self, state, greedy=False):
+    def select_action(self, state, greedy=True):
         feasible_actions = environment.get_feasible_actions(state)
-        # if state.test:
-        #     print(state.map)
-        #     print(feasible_actions)
-        #     state.test = False
         
         if greedy:
             epsilon = self.epsilon
@@ -105,13 +101,8 @@ class QLearner:
             f += self.get_state_action_frequency(state, a)
         return f
 
-    def get_epsilon(self, goal_found_list):
-        lookback = 50
-        epsilon = 0.05
-        recent_goal_rate = sum(goal_found_list[-lookback:]) / lookback
-        if len(goal_found_list) >= lookback and recent_goal_rate >= 0.5:
-            epsilon /= 5 ** ((recent_goal_rate-0.4)*10)
-        return epsilon
+    def get_epsilon(self):
+        return 0.05
 
     def get_delta(self, state, action):
         return 1 / (self.t / 10 + 1)
@@ -120,15 +111,8 @@ class QLearner:
         f = self.get_state_action_frequency(state, action)
         return 1 / (1.2 * (f/2 + 0.5))
 
-    def backtracking_update(self, state_actions):
-        for s, a in state_actions[::-1]:
-            s_a = environment.step(s, a)
-            r = environment.get_reward(s, a, s_a)
-            self.update_q_value(s, a, s_a, r)
-
     def learn(self, episodes, display=True):
         shortest_solution = []
-        goal_found_list = []
 
         for i in range(episodes):
             state = copy(self.state)
@@ -136,7 +120,7 @@ class QLearner:
             deadlock = False
             states = []
             actions = []
-            self.epsilon = self.get_epsilon(goal_found_list)
+            self.epsilon = self.get_epsilon()
             new_state_actions = 0
             for step in range(self.max_episode_length):
                 # exit if goal or deadlock is reached
@@ -167,7 +151,6 @@ class QLearner:
                 self.t += 1
             if goal_found:
                 break
-            #self.backtracking_update(list(zip(states, actions)))
 
             if display:
                 print(f"Episode {i+1}, length={step}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/step}")
