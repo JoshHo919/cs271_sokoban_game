@@ -180,7 +180,7 @@ def get_reward(state, action, new_state):
                         reward += BASIC_REWARD['ON_TARGET'] ** 2
                         wall_count = count_walls(state, box_next_position)
                         if wall_count >= 2:
-                            reward *= (wall_count - 1) * 1000
+                            reward *= (wall_count - 1) * 10000
                         box_next_position = box_next_position + actions[action]
                         while not is_out_of_bounds(state, box_next_position):
                             box_next_pos_status = get_location_status(state, box_next_position)
