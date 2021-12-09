@@ -1,21 +1,23 @@
-#CS 271 Sokoban Game Group 17
+# CS 271 Sokoban Game Group 17
 
-###members: Yeung, Calvin, Jeng-Shiun, Ho, Shen, Daolun
+### Members: 
+- Yeung, Calvin
+- Jeng-Shiun, Ho
+- Shen, Daolun
 
-##Instruction:
-run the program: 
+## Instructions:
+To run the program: 
 
     python3 main.py [input_file_path]
 
-output:
+Output format:
 
     [solution length] [solution]
 
 
 
-Parameters can be modified:
-
-- reward: environment.py line 20 BASIC_REWARD 
+Parameters that can be modified:
+- reward: environment.py BASIC_REWARD 
   + 'SPACE': step on a space or empty target
   + 'INFEASIBLE': if infeasible action(for future reward observation only)
   + 'ON_TARGET': box push to a target
