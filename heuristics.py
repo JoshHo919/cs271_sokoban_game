@@ -1,7 +1,6 @@
 import environment
 import numpy as np
 from copy import copy
-from numpy.linalg import norm
 from scipy.optimize import linear_sum_assignment
 from queue import Queue
 
@@ -11,29 +10,37 @@ class Node:
         self.prev = prev
         self.cost = cost
 
-def get_distance_table(state):
-    table = {}
+# returns state with boxes/targets removed, actor moved to loc
+def get_clean_state(state, loc):
     s = copy(state)
     r, c = s.map.shape
+    boxes = s.boxes
+    targets = s.targets
+    map = s.map
+    actor = s.actor
 
     # delete boxes and targets
-    for l in s.boxes:
-        s.map[l[0]][l[1]] = environment.SPACE
-    for l in s.targets:
-        s.map[l[0]][l[1]] = environment.SPACE
-    s.boxes = np.array([]).reshape(0, 0)
-    s.targets = np.array([]).reshape(0, 0)
+    for l in boxes:
+        map[l[0]][l[1]] = environment.SPACE
+    for l in targets:
+        map[l[0]][l[1]] = environment.SPACE
+    boxes = np.array([]).reshape(0, 0)
+    targets = np.array([]).reshape(0, 0)
+                
+    # move actor to set location
+    map[actor[0], actor[1]] = environment.SPACE
+    map[loc[0], loc[1]] = environment.ACTOR
+    
+    return environment.State(map, loc, boxes, targets)
+
+def get_distance_table(state):
+    table = {}
+    r, c = state.map.shape
 
     for i in range(r):
         for j in range(c):
-            if int(s.map[i, j]) != environment.WALL:
-                new_state = copy(s)
-                
-                # move actor to set location
-                loc = new_state.actor
-                new_state.map[loc[0], loc[1]] = environment.SPACE
-                new_state.map[i, j] = environment.ACTOR
-                new_state.actor = np.array([i, j])
+            if int(state.map[i, j]) != environment.WALL:
+                new_state = get_clean_state(state, np.array([i, j]))
                 
                 # compute distance matrix for location
                 compute_distance_matrix(table, new_state)
@@ -41,14 +48,12 @@ def get_distance_table(state):
 
 def compute_distance_matrix(table, state):
     r, c = state.map.shape
-    b = max(r, c)
     distance_matrix = np.full((r, c), -1)
     explored = {}
     q = Queue()
     q.put(Node(state, None, 0))
 
-    curr_loc = state.actor
-    loc_hash = b * curr_loc[0] + curr_loc[1]
+    loc_hash = environment.loc_hash(state)
 
     # use bfs to find shortest distance for each pair of points
     while not q.empty():
@@ -57,9 +62,9 @@ def compute_distance_matrix(table, state):
         if hash_val not in explored:
             explored[hash_val] = 1
             loc = node.state.actor
-            actions = feasible_actions(node.state)
+            actions = environment.get_feasible_actions(node.state)
             for a in actions:
-                new_state = step(node.state, a)
+                new_state = environment.step(node.state, a)
                 new_node = Node(new_state, node, node.cost + 1)
                 if environment.loc_hash(new_state) not in explored:
                     q.put(new_node)
@@ -67,32 +72,6 @@ def compute_distance_matrix(table, state):
     
     # save distance matrix
     table[loc_hash] = distance_matrix
-
-def feasible_actions(state):
-    r, c = state.map.shape
-    loc = state.actor
-    actions = []
-
-    for k in environment.actions.keys():
-        a = environment.actions[k]
-        new_loc = loc + a
-        i, j = new_loc[0], new_loc[1]
-
-        if 0 <= i < r and 0 <= j < c:
-            if state.map[i, j] == environment.SPACE:
-                actions.append(a)
-    
-    return actions
-
-# assumes action is feasible, no targets/blocks on map
-def step(state, action):
-    new_state = copy(state)
-    loc = state.actor
-    new_loc = loc + action
-    new_state.map[loc[0], loc[1]] = environment.SPACE
-    new_state.map[new_loc[0], new_loc[1]] = environment.ACTOR
-    new_state.actor = new_loc
-    return new_state
 
 # used for EMM heuristic
 class MinMatcher:
