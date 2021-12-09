@@ -26,7 +26,7 @@ class QLearner:
             h_val += self.h_weight[i] * h.heuristic(state)
         return h_val
 
-    def select_action(self, state, greedy=True):
+    def select_action(self, state, greedy=False):
         feasible_actions = environment.get_feasible_actions(state)
         
         if greedy:
@@ -60,8 +60,6 @@ class QLearner:
                 if self.get_state_action_frequency(state, a) > 0:
                     ucb += c * np.sqrt(np.log(self.t) / self.get_state_action_frequency(state, a))
                 val = (1 - delta) * ucb + delta * delta_h
-                #print(ucb)
-                #val = ucb
 
                 if val > max_val:
                     max_val = val
@@ -102,9 +100,10 @@ class QLearner:
         return f
 
     def get_epsilon(self):
-        return 0.05
+        return 1 / (self.t / 100 + 1)
 
     def get_delta(self, state, action):
+        #return 0
         return 1 / (self.t / 10 + 1)
 
     def get_learning_rate(self, state, action):
@@ -154,12 +153,6 @@ class QLearner:
 
             if display:
                 print(f"Episode {i+1}, length={step}, deadlock={deadlock}, max_q={self.get_max_q(self.state)}, new_state_action_ratio={new_state_actions/step}")
-            if False:
-                for s in states[-1:]:
-                    print(s.map)
-                    pass
-                s_a = environment.step(states[-1], actions[-1])
-                print(s_a.map)
         if display:
             print(f"Shortest solution has length {len(shortest_solution)}: {shortest_solution}")
-        return i, len(shortest_solution)
+        return len(shortest_solution), shortest_solution

@@ -17,7 +17,7 @@ if __name__ == '__main__':
             episodes = 1000
             init_state = environment.State.from_config(config_text)
 
-            testing = True
+            testing = False
 
             if testing:
                 ep_counts, sol_lens, times = [], [], []
@@ -35,7 +35,8 @@ if __name__ == '__main__':
                 print_data("Time", times)
             else:
                 qlearner = QLearner(init_state)
-                qlearner.learn(episodes, display=True)
+                n, actions = qlearner.learn(episodes, display=False)
+                print(f"{n} {' '.join(map(lambda x: x[0], actions))}")
     else:
         print("No input file specified")
 
